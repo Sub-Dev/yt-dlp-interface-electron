@@ -11,13 +11,13 @@
     "strict": true,
     "noImplicitAny": false,
     "esModuleInterop": true,
-    "module": "ESNext", 
+    "module": "CommonJS",      // Alterado para CommonJS
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "outDir": "dist", 
+    "outDir": "dist",
     "typeRoots": [
       "./src/types",
       "./node_modules/@types"
@@ -27,12 +27,12 @@
         "name": "next"
       }
     ],
-    "noEmit": false 
+    "noEmit": false
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    "electron/**/*", 
+    "electron/**/*",
     "next-env.d.ts",
     ".next/types/**/*.ts"
   ],

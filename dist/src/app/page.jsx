@@ -1,42 +1,82 @@
-import Image from "next/image";
-export default function Home() {
-    return (<div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image className="dark:invert" src="/next.svg" alt="Next.js logo" width={180} height={38} priority/>
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+"use strict";
+"use client";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = Home;
+const react_1 = require("react");
+function Home() {
+    const [url, setUrl] = (0, react_1.useState)("");
+    const [videoFormats, setVideoFormats] = (0, react_1.useState)([]);
+    const [audioFormats, setAudioFormats] = (0, react_1.useState)([]);
+    const [subtitles, setSubtitles] = (0, react_1.useState)([]);
+    const [selectedVideo, setSelectedVideo] = (0, react_1.useState)("");
+    const [selectedAudio, setSelectedAudio] = (0, react_1.useState)("");
+    const [selectedSubtitle, setSelectedSubtitle] = (0, react_1.useState)("");
+    const [output, setOutput] = (0, react_1.useState)("");
+    const handleCheckInfo = async () => {
+        try {
+            console.log(window.electronAPI);
+            const result = await window.electronAPI.getVideoInfo(url);
+            setVideoFormats(result.videoFormats);
+            setAudioFormats(result.audioFormats);
+            setSubtitles(result.subtitles);
+        }
+        catch (error) {
+            console.error("Erro ao obter informações:", error);
+            setOutput(`Erro ao obter informações do vídeo: ${error.message || error}`);
+        }
+    };
+    const handleDownload = async () => {
+        setOutput("Baixando...");
+        try {
+            const format = selectedVideo || selectedAudio;
+            const result = await window.electronAPI.downloadVideo({ url, options: { format } });
+            setOutput(result);
+        }
+        catch (error) {
+            setOutput("Erro no download");
+        }
+    };
+    return (<div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
+      <h1>yt-dlp Downloader</h1>
+      <input type="text" placeholder="Enter video URL" value={url} onChange={(e) => setUrl(e.target.value)} style={{ width: "80%", padding: "10px", marginBottom: "10px", color: "black" }} required/>
+      <button onClick={handleCheckInfo} style={{ padding: "10px 20px", fontSize: "16px", marginLeft: "10px" }}>
+        Verificar
+      </button>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5" href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app" target="_blank" rel="noopener noreferrer">
-            <Image className="dark:invert" src="/vercel.svg" alt="Vercel logomark" width={20} height={20}/>
-            Deploy now
-          </a>
-          <a className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44" href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app" target="_blank" rel="noopener noreferrer">
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a className="flex items-center gap-2 hover:underline hover:underline-offset-4" href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app" target="_blank" rel="noopener noreferrer">
-          <Image aria-hidden src="/file.svg" alt="File icon" width={16} height={16}/>
-          Learn
-        </a>
-        <a className="flex items-center gap-2 hover:underline hover:underline-offset-4" href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app" target="_blank" rel="noopener noreferrer">
-          <Image aria-hidden src="/window.svg" alt="Window icon" width={16} height={16}/>
-          Examples
-        </a>
-        <a className="flex items-center gap-2 hover:underline hover:underline-offset-4" href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app" target="_blank" rel="noopener noreferrer">
-          <Image aria-hidden src="/globe.svg" alt="Globe icon" width={16} height={16}/>
-          Go to nextjs.org →
-        </a>
-      </footer>
+      {videoFormats.length > 0 && (<>
+          <h3>Qualidade do Vídeo</h3>
+          <select value={selectedVideo} onChange={(e) => setSelectedVideo(e.target.value)}>
+            <option value="">Nenhum (apenas áudio)</option>
+            {videoFormats.map((format) => (<option key={format.format_id} value={format.format_id}>
+                {format.resolution} - {format.ext}
+              </option>))}
+          </select>
+        </>)}
+
+      {audioFormats.length > 0 && (<>
+          <h3>Faixa de Áudio</h3>
+          <select value={selectedAudio} onChange={(e) => setSelectedAudio(e.target.value)}>
+            <option value="">Nenhum</option>
+            {audioFormats.map((format) => (<option key={format.format_id} value={format.format_id}>
+                {format.abr} - {format.ext}
+              </option>))}
+          </select>
+        </>)}
+
+      {subtitles.length > 0 && (<>
+          <h3>Legendas</h3>
+          <select value={selectedSubtitle} onChange={(e) => setSelectedSubtitle(e.target.value)}>
+            <option value="">Nenhuma</option>
+            {subtitles.map((subtitle) => (<option key={subtitle.lang} value={subtitle.lang}>
+                {subtitle.lang}
+              </option>))}
+          </select>
+        </>)}
+
+      <button onClick={handleDownload} style={{ padding: "10px 20px", fontSize: "16px", marginTop: "10px" }}>
+        Baixar
+      </button>
+
+      <pre style={{ background: "#f4f4f4", padding: "10px", marginTop: "20px", color: "black" }}>{output}</pre>
     </div>);
 }
