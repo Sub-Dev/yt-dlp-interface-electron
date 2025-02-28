@@ -1,4 +1,6 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const nextConfig = {
 /* config options here */
 };
-export default nextConfig;
+exports.default = nextConfig;

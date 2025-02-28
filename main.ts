@@ -1,67 +1,107 @@
-/// <reference types="electron" />
-import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
-import path from 'path';
-import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';  // Importando fileURLToPath
-import { dirname } from 'path';  
+import { app, BrowserWindow, ipcMain } from "electron";
+import { exec } from "child_process";
+import path from "path";
+import fs from "fs";
 
+// __dirname já está disponível em CommonJS, não precisamos de import.meta.url
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// Caminho para o binário do yt-dlp dentro da pasta bin
+const ytDlpPath = path.resolve(__dirname, "bin", "yt-dlp.exe");
+
+console.log(`Caminho para o yt-dlp.exe: ${ytDlpPath}`);
+
+// Verifica se o yt-dlp existe antes de tentar rodar os comandos
+if (!fs.existsSync(ytDlpPath)) {
+  console.error("Erro: yt-dlp.exe não encontrado no diretório bin!");
+  process.exit(1);
+}
 
 let mainWindow: BrowserWindow | null = null;
 
-async function createWindow() {
+app.whenReady().then(() => {
   mainWindow = new BrowserWindow({
-    width: 1024,
-    height: 768,
+    width: 800,
+    height: 600,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true, 
+      preload: path.join(__dirname, "preload.js"),
       nodeIntegration: false,
+      contextIsolation: true,
     },
   });
 
-  const devURL = 'http://localhost:3000';
-  mainWindow.loadURL(devURL);
-}
+  mainWindow.loadURL("http://localhost:3000"); 
+});
 
-app.whenReady().then(() => {
-  createWindow();
+ipcMain.handle("get-video-info", async (_, url: string) => {
+  console.log(`Recebido URL: ${url}`);
+  return new Promise((resolve, reject) => {
+    console.log(`Obtendo informações do vídeo: ${url}`);
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    exec(`"${ytDlpPath}" -j "${url}"`, { cwd: path.dirname(ytDlpPath) }, (error, stdout, stderr) => {
+      if (error) {
+        console.error("Erro ao executar yt-dlp:", error);
+        console.error("stderr:", stderr);
+        reject("Erro ao obter informações do vídeo");
+        return;
+      }
+      
+      console.log("stdout:", stdout);
+
+      try {
+        const videoData = JSON.parse(stdout);
+        if (!videoData.formats) {
+          reject("Nenhum formato disponível para este vídeo.");
+          return;
+        }
+
+        const videoFormats = videoData.formats
+          .filter((format: any) => format.vcodec !== "none")
+          .map((format: any) => ({
+            format_id: format.format_id,
+            resolution: format.height ? `${format.height}p` : "Desconhecido",
+            ext: format.ext,
+          }));
+
+        const audioFormats = videoData.formats
+          .filter((format: any) => format.acodec !== "none")
+          .map((format: any) => ({
+            format_id: format.format_id,
+            ext: format.ext,
+            abr: format.abr ? `${format.abr} kbps` : "Desconhecido",
+          }));
+
+        const subtitles = videoData.subtitles
+          ? Object.keys(videoData.subtitles).map((lang) => ({
+              lang,
+              url: videoData.subtitles[lang][0].url,
+            }))
+          : [];
+
+        console.log("Informações do vídeo obtidas com sucesso!");
+        resolve({ videoFormats, audioFormats, subtitles });
+      } catch (err) {
+        console.error("Erro ao processar os dados do vídeo:", err);
+        reject("Erro ao processar os dados do vídeo");
+      }
+    });
   });
 });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
-
-// Manipulação do ipcMain para download com yt-dlp
-ipcMain.handle('yt-dlp:download', async (_event: IpcMainInvokeEvent, { url, options }: { url: string; options?: any }) => {
+ipcMain.handle("download-video", async (_, { url, format }) => {
   return new Promise((resolve, reject) => {
-    if (!url) return reject('URL is required');
+    console.log(`Iniciando download do vídeo: ${url}, formato: ${format}`);
 
-    const args = [url];
-    if (options && options.format) {
-      args.push('-f', options.format);
-    }
-
-    const ytDlp = spawn('yt-dlp', args);
-    let output = '';
-
-    ytDlp.stdout.on('data', (data: Buffer) => {
-      output += data.toString();
-    });
-
-    ytDlp.stderr.on('data', (data: Buffer) => {
-      console.error(`yt-dlp error: ${data}`);
-    });
-
-    ytDlp.on('close', (code: number) => {
-      if (code === 0) resolve(output);
-      else reject(`yt-dlp exited with code ${code}`);
-    });
+    exec(
+      `"${ytDlpPath}" -f "${format}" "${url}" -o "%USERPROFILE%/Downloads/%(title)s.%(ext)s"`,
+      (error, stdout, stderr) => {
+        if (error) {
+          console.error("Erro no download do vídeo:", stderr);
+          reject("Erro no download do vídeo");
+          return;
+        }
+        console.log("Download concluído com sucesso!");
+        resolve("Download concluído!");
+      }
+    );
   });
 });
