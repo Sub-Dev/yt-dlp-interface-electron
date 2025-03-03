@@ -7,11 +7,8 @@ const electron_1 = require("electron");
 const child_process_1 = require("child_process");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
-// __dirname já está disponível em CommonJS, não precisamos de import.meta.url
-// Caminho para o binário do yt-dlp dentro da pasta bin
 const ytDlpPath = path_1.default.resolve(__dirname, "bin", "yt-dlp.exe");
 console.log(`Caminho para o yt-dlp.exe: ${ytDlpPath}`);
-// Verifica se o yt-dlp existe antes de tentar rodar os comandos
 if (!fs_1.default.existsSync(ytDlpPath)) {
     console.error("Erro: yt-dlp.exe não encontrado no diretório bin!");
     process.exit(1);
@@ -21,6 +18,7 @@ electron_1.app.whenReady().then(() => {
     mainWindow = new electron_1.BrowserWindow({
         width: 800,
         height: 600,
+        icon: path_1.default.join(__dirname, "assets", "logo-yt-dlp.png"),
         webPreferences: {
             preload: path_1.default.join(__dirname, "preload.js"),
             nodeIntegration: false,
@@ -90,4 +88,7 @@ electron_1.ipcMain.handle("download-video", async (_, { url, format }) => {
             resolve("Download concluído!");
         });
     });
+});
+electron_1.ipcMain.handle("open-external-link", async (_, url) => {
+    return electron_1.shell.openExternal(url);
 });

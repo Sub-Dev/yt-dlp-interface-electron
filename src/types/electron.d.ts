@@ -5,6 +5,7 @@ export interface ElectronAPI {
     subtitles: { lang: string; url: string }[];
   }>;
   downloadVideo: (params: { url: string; options?: { format?: string } }) => Promise<string>;
+  openExternalLink: (url: string) => Promise<void>;
 }
 
 // Declaração global para o objeto window
