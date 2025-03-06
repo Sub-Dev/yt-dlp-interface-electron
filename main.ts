@@ -57,6 +57,7 @@ ipcMain.handle("get-video-info", async (_, url: string) => {
             format_id: format.format_id,
             resolution: format.height ? `${format.height}p` : "Desconhecido",
             ext: format.ext,
+            acodec: format.acodec,
           }));
 
         const audioFormats = videoData.formats
@@ -88,20 +89,36 @@ ipcMain.handle("download-video", async (_, { url, format }) => {
   return new Promise((resolve, reject) => {
     console.log(`Iniciando download do vídeo: ${url}, formato: ${format}`);
 
-    exec(
-      `"${ytDlpPath}" -f "${format}" "${url}" -o "%USERPROFILE%/Downloads/%(title)s.%(ext)s"`,
-      (error, stdout, stderr) => {
-        if (error) {
-          console.error("Erro no download do vídeo:", stderr);
-          reject("Erro no download do vídeo");
-          return;
-        }
-        console.log("Download concluído com sucesso!");
-        resolve("Download concluído!");
+    // Testar os formatos de vídeo para encontrar um que funcione
+    const formatsToTry = [format, "bestvideo"]; // Tenta o formato específico, depois o melhor vídeo
+    let formatToDownload = "";
+
+    const testFormat = (index: number) => {
+      if (index >= formatsToTry.length) {
+        reject("Erro: Não foi possível baixar o vídeo.");
+        return;
       }
-    );
+
+      const command = `"${ytDlpPath}" -f ${formatsToTry[index]}+bestaudio --add-header "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" "${url}" -o "%USERPROFILE%/Downloads/%(title)s.%(ext)s"`;
+
+
+
+      exec(command, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`Erro ao tentar o formato ${formatsToTry[index]}:`, stderr);
+          testFormat(index + 1); // Tenta o próximo formato
+        } else {
+          console.log("Download concluído com sucesso!");
+          resolve("Download concluído!");
+        }
+      });
+    };
+
+    // Iniciar o teste dos formatos
+    testFormat(0);
   });
 });
+
 
 ipcMain.handle("open-external-link", async (_, url: string) => {
   return shell.openExternal(url);
