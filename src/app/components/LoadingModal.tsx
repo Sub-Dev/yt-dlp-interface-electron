@@ -4,9 +4,10 @@ import React from "react";
 
 interface LoadingModalProps {
   isOpen: boolean;
+  message: string;
 }
 
-const LoadingModal: React.FC<LoadingModalProps> = ({ isOpen }) => {
+const LoadingModal: React.FC<LoadingModalProps> = ({ isOpen, message }) => {
   if (!isOpen) return null;
 
   return (
@@ -32,6 +33,7 @@ const LoadingModal: React.FC<LoadingModalProps> = ({ isOpen }) => {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
+          boxShadow: "0px 4px 10px rgba(0,0,0,0.2)",
         }}
       >
         <div
@@ -44,11 +46,10 @@ const LoadingModal: React.FC<LoadingModalProps> = ({ isOpen }) => {
             animation: "spin 1s linear infinite",
           }}
         />
-        <p style={{ marginTop: "10px", fontSize: "18px", fontWeight: "bold", color: "black" }}>
-          Verificando vídeo...
+        <p style={{ marginTop: "10px", fontSize: "18px", fontWeight: "bold", color: "black", textAlign: "center" }}>
+          {message}
         </p>
       </div>
-
 
       <style jsx>{`
         @keyframes spin {

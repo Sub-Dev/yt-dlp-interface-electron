@@ -6,8 +6,10 @@ export interface ElectronAPI {
   }>;
   downloadVideo: (params: { url: string; options?: { format?: string } }) => Promise<string>;
   openExternalLink: (url: string) => Promise<void>;
+  chooseDownloadDirectory: () => Promise<string | null>;
   onDownloadProgress: (callback: (progress: number) => void) => void;
   removeDownloadProgressListener: (callback: (progress: number) => void) => void;
+  onUpdateStatus: (callback: (status: string) => void) => void;
 }
 
 // Declaração global para o objeto window
