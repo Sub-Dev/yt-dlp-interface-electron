@@ -23,12 +23,15 @@ export default function Home() {
   const [subtitles, setSubtitles] = useState<{ lang: string; url: string }[]>([]);
   const [selectedVideo, setSelectedVideo] = useState("");
   const [output, setOutput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("");
   const [infoLoaded, setInfoLoaded] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadHistory, setDownloadHistory] = useState<DownloadItem[]>([]);
 
-  // Função para adicionar um item ao histórico e salvá-lo no localStorage
+  const [updateStatus, setUpdateStatus] = useState("");
+
+
   const addDownloadHistory = (item: DownloadItem) => {
     setDownloadHistory((prev) => {
       const newHistory = [item, ...prev];
@@ -37,7 +40,7 @@ export default function Home() {
     });
   };
 
-  // Carrega o histórico de downloads ao montar o componente
+
   useEffect(() => {
     const storedHistory = localStorage.getItem("downloadHistory");
     if (storedHistory) {
@@ -46,7 +49,8 @@ export default function Home() {
   }, []);
 
   const handleCheckInfo = async () => {
-    setIsLoading(true);
+    setLoading(true);
+    setLoadingMessage("Verificando vídeo...");
     setOutput("");
     setInfoLoaded(false);
     try {
@@ -60,7 +64,7 @@ export default function Home() {
       const errorMessage = error instanceof Error ? error.message : String(error);
       setOutput(`Erro ao obter informações do vídeo: ${errorMessage}`);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -71,9 +75,8 @@ export default function Home() {
     }
     setOutput("Baixando vídeo...");
     try {
-      // Supondo que o seu método downloadVideo retorne um JSON com informações do download
-      // como: { filePath, title, thumbnail }
-      const result = await window.electronAPI.downloadVideo({ url, format: selectedVideo });
+
+      const result = await window.electronAPI.downloadVideo({ url, options: { format: selectedVideo } });
       const { filePath, title, thumbnail } = JSON.parse(result);
       setOutput("Download concluído!");
       addDownloadHistory({
@@ -90,7 +93,7 @@ export default function Home() {
   const handleDownloadAudio = async () => {
     setOutput("Baixando áudio...");
     try {
-      const result = await window.electronAPI.downloadVideo({ url, format: "bestaudio" });
+      const result = await window.electronAPI.downloadVideo({ url, options: { format: "bestaudio" } });
       const { filePath, title, thumbnail } = JSON.parse(result);
       setOutput("Download concluído!");
       addDownloadHistory({
@@ -104,7 +107,6 @@ export default function Home() {
     }
   };
 
-  // Exemplo de listener de progresso (supondo que sua API envie essa atualização)
   useEffect(() => {
     const progressListener = (progress: number) => {
       setDownloadProgress(progress);
@@ -116,6 +118,22 @@ export default function Home() {
       window.electronAPI.removeDownloadProgressListener(progressListener);
     };
   }, []);
+
+  useEffect(() => {
+    window.electronAPI.onUpdateStatus((status: string) => {
+      setUpdateStatus(status);
+    });
+  }, []);
+
+  useEffect(() => {
+    window.electronAPI.onUpdateStatus((status: string) => {
+      setLoadingMessage(status);
+      setLoading(true);
+
+      setTimeout(() => setLoading(false), 5000);
+    });
+  }, []);
+
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px", fontFamily: "Arial, sans-serif" }}>
@@ -134,9 +152,8 @@ export default function Home() {
           Verificar
         </button>
 
-        <LoadingModal isOpen={isLoading} />
+        <LoadingModal isOpen={loading} message={loadingMessage} />
 
-        {/* Exibe os controles de download apenas se as informações foram carregadas */}
         {infoLoaded && (
           <>
             {videoFormats.length > 0 && (
@@ -167,7 +184,6 @@ export default function Home() {
           </>
         )}
 
-        {/* Exibe barra de progresso se houver */}
         {downloadProgress > 0 && (
           <div style={{ marginTop: "20px" }}>
             <p>Progresso do Download: {downloadProgress}%</p>
@@ -180,7 +196,6 @@ export default function Home() {
         {output}
       </pre>
 
-      {/* Seção de Histórico de Downloads */}
       <div style={{ width: "80%", marginTop: "20px" }}>
         <h2>Histórico de Downloads</h2>
         {downloadHistory.length === 0 ? (
