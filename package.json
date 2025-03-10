@@ -3,21 +3,23 @@
   "version": "0.1.0",
   "private": true,
   "main": "dist/main.js",
-"scripts": {
-  "dev": "next dev",
-  "build": "next build && next export && tsc --project tsconfig.electron.json && npm run copy-yt-dlp",
-  "copy-yt-dlp": "copyfiles -u 1 ./bin/yt-dlp.exe ./dist/bin/",
-  "start": "next start",
-  "electron": "tsc --project tsconfig.electron.json && electron dist/main.js",
-  "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && npm run electron\""
-},
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build && next export && tsc --project tsconfig.electron.json && npm run copy-yt-dlp",
+    "copy-yt-dlp": "copyfiles -u 1 ./bin/yt-dlp.exe ./dist/bin/",
+    "start": "next start",
+    "electron": "tsc --project tsconfig.electron.json && electron dist/main.js",
+    "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && npm run electron\""
+  },
   "dependencies": {
     "next": "15.1.7",
+    "node-fetch": "^2.7.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/node-fetch": "^2.6.12",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "concurrently": "^9.1.2",
