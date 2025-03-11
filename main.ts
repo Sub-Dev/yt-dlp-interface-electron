@@ -63,7 +63,11 @@ app.whenReady().then(() => {
 
   mainWindow.loadURL("http://localhost:3000");
 
-  checkAndUpdateYtDlp(mainWindow);
+  mainWindow.webContents.on("did-finish-load", () => {
+    if (mainWindow) {
+      checkAndUpdateYtDlp(mainWindow);
+    }
+  });
 
   // Define o menu da aplicação, incluindo a opção de escolher diretório de download
   const menuTemplate: MenuItemConstructorOptions[] = [
@@ -146,7 +150,13 @@ ipcMain.handle("get-video-info", async (_, url: string) => {
           : [];
 
         console.log("Informações do vídeo obtidas com sucesso!");
-        resolve({ videoFormats, audioFormats, subtitles });
+        resolve({
+          videoFormats,
+          audioFormats,
+          subtitles,
+          title: videoData.title,
+          thumbnail: videoData.thumbnail
+        });
       } catch (err) {
         console.error("Erro ao processar os dados do vídeo:", err);
         reject("Erro ao processar os dados do vídeo");
@@ -174,6 +184,7 @@ ipcMain.handle("download-video", async (_, { url, format }) => {
       const args = [
         "-f",
         `${formatsToTry[index]}+bestaudio`,
+        "--merge-output-format", "mp4", // Garante saída em mp4 caso precise mesclar
         "--add-header",
         'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         url,
@@ -210,10 +221,14 @@ ipcMain.handle("download-video", async (_, { url, format }) => {
             try {
               const videoData = JSON.parse(stdout);
               const title = videoData.title || "video";
-              const thumbnail = videoData.thumbnail || "";
-              const ext = videoData.ext || "mp4";
-              const filePath = path.join(downloadDir, `${title}.${ext}`);
-              resolve(JSON.stringify({ filePath, title, thumbnail }));
+              const ext = videoData.ext || "mp4"; // Garante extensão correta
+              const filePath = path.join(downloadDir, `${title}.${ext}`).replace(/\\/g, "/");
+
+              const downloadInfo = { filePath, title, thumbnail: videoData.thumbnail || "" };
+              
+              // Envia para o frontend o caminho final do arquivo
+              mainWindow?.webContents.send("download-complete", downloadInfo);
+              resolve(JSON.stringify(downloadInfo));
             } catch (err) {
               console.error("Erro ao processar metadados:", err);
               reject("Download concluído, mas erro ao processar metadados.");
@@ -232,4 +247,23 @@ ipcMain.handle("download-video", async (_, { url, format }) => {
 
 ipcMain.handle("open-external-link", async (_, url: string) => {
   return shell.openExternal(url);
+});
+
+ipcMain.handle("open-downloads-folder", () => {
+  shell.openPath(downloadDir);
+});
+
+ipcMain.handle("get-download-directory", async () => {
+  return downloadDir; // Retorna o diretório de download configurado
+});
+
+ipcMain.handle("choose-download-directory", async (event) => {
+  const result = await dialog.showOpenDialog({
+    properties: ["openDirectory"],
+  });
+  if (result.canceled) {
+    return null; // Retorna null se o usuário cancelar
+  } else {
+    return result.filePaths[0]; // Retorna o caminho do diretório escolhido
+  }
 });

@@ -17,6 +17,7 @@
     --primary-color: #ff007f; /* Rosa do botão de play à esquerda */
     --secondary-color: #8a2be2; /* Roxo do triângulo no play central */
     --accent-color: #ffffff; /* Destaque no modo escuro */
+    --info-box-bg: #424242; /* Fundo para a caixa de informações no modo escuro */
   }
 }
 
