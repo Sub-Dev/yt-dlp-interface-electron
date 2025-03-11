@@ -12,6 +12,10 @@
     "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && npm run electron\""
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^6.4.7",
+    "@mui/material": "^6.4.7",
     "next": "15.1.7",
     "node-fetch": "^2.7.0",
     "react": "^19.0.0",
