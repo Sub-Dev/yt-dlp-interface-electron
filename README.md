@@ -11,6 +11,8 @@
   </h3>
   <img alt="Interface da aplicação Homepage" src=".github/tela-1.png" width="100%">
   <img alt="Interface da aplicação Homepage 2" src=".github/tela-2.png" width="100%">
+  <img alt="Interface da aplicação Homepage 2" src=".github/tela-3.png" width="100%">
+  <img alt="Interface da aplicação Homepage 2" src=".github/tela-4.png" width="100%">
 </p>
 
 # yt-dlp Interface com Next.js e Electron

@@ -16,5 +16,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onDirectoryUpdate: (callback: (dir: string) => void) =>
     ipcRenderer.on("download-directory-updated", (_, dir) => callback(dir)),
   openDownloadsFolder: () => ipcRenderer.invoke("open-downloads-folder"),
+  removeDirectoryUpdateListener: (callback: (dir: string) => void) =>
+    ipcRenderer.removeListener("download-directory-updated", (_, dir) => callback(dir)),
   getDownloadDirectory: () => ipcRenderer.invoke("get-download-directory"),
 });
