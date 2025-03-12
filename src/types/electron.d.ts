@@ -26,6 +26,7 @@ export interface ElectronAPI {
   onUpdateStatus: (callback: (status: string) => void) => void;
   onDirectoryUpdate: (callback: (dir: string) => void) => void;
   openDownloadsFolder: () => Promise<void>;
+  removeDirectoryUpdateListener: (callback: (dir: string) => void) => void;
   getDownloadDirectory: () => Promise<string>; 
 }
 

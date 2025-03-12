@@ -5,10 +5,11 @@
   "main": "dist/main.js",
   "scripts": {
     "dev": "next dev",
-    "build": "next build && next export && tsc --project tsconfig.electron.json && npm run copy-yt-dlp",
-    "copy-yt-dlp": "copyfiles -u 1 ./bin/yt-dlp.exe ./dist/bin/",
+    "build": "next build && tsc --project tsconfig.electron.json && npm run copy-yt-dlp && npm run copy-assets",
+    "copy-yt-dlp": "copyfiles -u 1 ./bin/yt-dlp.exe ./dist/main/bin/",
+    "copy-assets": "copyfiles -u 1 ./assets/**/* ./dist/assets/",
     "start": "next start",
-    "electron": "tsc --project tsconfig.electron.json && electron dist/main.js",
+    "electron": "tsc --project tsconfig.electron.json && electron dist/main/main.js",
     "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && npm run electron\""
   },
   "dependencies": {
@@ -16,6 +17,8 @@
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^6.4.7",
     "@mui/material": "^6.4.7",
+    "@mui/x-date-pickers": "^7.27.3",
+    "date-fns": "^2.28.0",
     "next": "15.1.7",
     "node-fetch": "^2.7.0",
     "react": "^19.0.0",
@@ -32,7 +35,7 @@
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.3",
+    "typescript": "^5.8.2",
     "wait-on": "^8.0.2"
   }
 }

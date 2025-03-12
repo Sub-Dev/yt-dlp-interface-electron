@@ -2,12 +2,17 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "module": "CommonJS",
-    "outDir": "dist",
+    "outDir": "dist/main",   // Confirme que o código está indo para dist/main
+    "rootDir": "src/main",
     "noEmit": false
   },
   "include": [
-    "electron.ts",
-    "main.ts",
-    "preload.ts"
+    "src/main/electron.ts",
+    "src/main/main.ts",
+    "src/main/preload.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
   ]
 }

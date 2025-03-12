@@ -1,5 +1,3 @@
-// /src/components/pages/PageHistory.tsx
-"use client";
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -15,12 +13,15 @@ import {
 } from "@mui/material";
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import { DownloadItem } from "../../types/types";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 
 export default function PageHistory() {
   const [downloadHistory, setDownloadHistory] = useState<DownloadItem[]>([]);
   const [filterName, setFilterName] = useState("");
-  const [filterDate, setFilterDate] = useState("");
   const [filterMediaType, setFilterMediaType] = useState("");
+  const [filterDate, setFilterDate] = useState<Date | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("downloadHistory");
@@ -36,14 +37,13 @@ export default function PageHistory() {
       if (history.length > 0) {
         history[0].progress = progress;
 
-        // Se o progresso atingir 100% e o filePath for fornecido, atualiza o caminho do arquivo
         if (progress >= 100 && filePath) {
           history[0].filePath = filePath;
-          localStorage.setItem("lastDownloadInfo", JSON.stringify({ filePath })); // Atualiza a última info
+          localStorage.setItem("lastDownloadInfo", JSON.stringify({ filePath }));
         }
 
         localStorage.setItem("downloadHistory", JSON.stringify(history));
-        setDownloadHistory([...history]); // Força o re-render para refletir a mudança
+        setDownloadHistory([...history]);
       }
     };
 
@@ -53,10 +53,9 @@ export default function PageHistory() {
     };
   }, []);
 
-
   const filteredHistory = downloadHistory.filter((item) => {
     const matchName = item.title.toLowerCase().includes(filterName.toLowerCase());
-    const matchDate = filterDate ? item.date.includes(filterDate) : true;
+    const matchDate = filterDate ? item.date.includes(filterDate.toString()) : true;
     const matchMedia = filterMediaType ? item.mediaType === filterMediaType : true;
     return matchName && matchDate && matchMedia;
   });
@@ -67,48 +66,111 @@ export default function PageHistory() {
   };
 
   const handleOpenFolder = () => {
-    window.electronAPI.openDownloadsFolder(); // Certifique-se de expor essa função no preload
+    window.electronAPI.openDownloadsFolder();
   };
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box sx={{ p: 2, width: "100%", height: "100vh", display: "flex", flexDirection: "column" }}>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <Typography variant="h5" gutterBottom>
           Histórico de Downloads
         </Typography>
-        <IconButton onClick={handleOpenFolder} color="primary">
-          <FolderOpenIcon />
-        </IconButton>
+
+        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}>
+          <Typography variant="h6" sx={{ marginBottom: 1, color: "white", fontWeight: "bold" }}>
+            Pasta Download
+          </Typography>
+
+          <IconButton onClick={handleOpenFolder} color="primary" sx={{ color: "white", "&:hover": { color: "var(--primary-color)" } }}>
+            <FolderOpenIcon sx={{ fontSize: 60, color: "var(--primary-color)" }} />
+          </IconButton>
+        </Box>
       </Box>
 
-      <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+      <Box sx={{ display: "flex", gap: 2, mb: 2, width: "100%", flexWrap: "wrap" }}>
         <TextField
           label="Filtrar por Nome"
           variant="outlined"
-          size="small"
+          size="medium"
           value={filterName}
           onChange={(e) => setFilterName(e.target.value)}
+          sx={{
+            marginBottom: 2,
+            backgroundColor: "var(--background)",
+            input: { color: "var(--foreground)" },
+            width: "250px",
+            height: "56px",
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": { borderColor: "var(--foreground)" },
+              "&:hover fieldset": { borderColor: "var(--foreground)" },
+              "&.Mui-focused fieldset": { borderColor: "var(--primary-color)" },
+            },
+          }}
         />
-        <TextField
-          label="Filtrar por Data"
+        <FormControl>
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <DatePicker
+              label="Filtrar por Data"
+              value={filterDate}
+              onChange={(newDate) => setFilterDate(newDate)}
+              sx={{
+                marginBottom: 2,
+                backgroundColor: "var(--background)",
+                input: { color: "var(--foreground)" },
+                width: "250px",
+                height: "56px",
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": { borderColor: "var(--foreground)" },
+                  "&:hover fieldset": { borderColor: "var(--foreground)" },
+                  "&.Mui-focused fieldset": { borderColor: "var(--primary-color)" },
+                },
+              }}
+            />
+          </LocalizationProvider>
+        </FormControl>
+        <FormControl
+          size="medium"
           variant="outlined"
-          size="small"
-          value={filterDate}
-          onChange={(e) => setFilterDate(e.target.value)}
-        />
-        <FormControl size="small" variant="outlined">
+          sx={{
+            backgroundColor: "var(--background)",
+            width: "250px",
+            height: "56px",
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": { borderColor: "var(--foreground)" },
+              "&:hover fieldset": { borderColor: "var(--foreground)" },
+              "&.Mui-focused fieldset": { borderColor: "var(--primary-color)" },
+            },
+          }}
+        >
           <InputLabel>Tipo de Mídia</InputLabel>
           <Select
             label="Tipo de Mídia"
             value={filterMediaType}
             onChange={(e) => setFilterMediaType(e.target.value)}
+            sx={{
+              height: "56px",
+            }}
           >
             <MenuItem value="">Todos</MenuItem>
             <MenuItem value="video">Vídeo</MenuItem>
             <MenuItem value="audio">Áudio</MenuItem>
           </Select>
         </FormControl>
-        <Button variant="outlined" onClick={handleClearHistory}>
+        <Button
+          size="small"
+          variant="outlined"
+          sx={{
+            backgroundColor: "var(--background)",
+            borderColor: "var(--foreground)",
+            height: "56px",
+            color: "black", // Texto do botão em preto
+            "&:hover": {
+              borderColor: "var(--primary-color)",
+              backgroundColor: "rgba(var(--background), 0.9)",
+            },
+          }}
+          onClick={handleClearHistory}
+        >
           Limpar Histórico
         </Button>
       </Box>
