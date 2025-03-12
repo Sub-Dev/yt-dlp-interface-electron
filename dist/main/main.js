@@ -19,6 +19,7 @@ let mainWindow = null;
 // Configuração: caminho do arquivo de config na pasta de dados do usuário.
 const configPath = path_1.default.join(electron_1.app.getPath("userData"), "config.json");
 // Funções para ler e salvar configuração
+const directoryUpdateListeners = [];
 function readConfig() {
     if (fs_1.default.existsSync(configPath)) {
         try {
@@ -89,9 +90,47 @@ electron_1.app.whenReady().then(() => {
         },
         {
             label: "Arquivo",
+            submenu: [{ role: "quit" }],
+        },
+        {
+            label: "Developer",
             submenu: [
-                { role: "quit" }
-            ]
+                {
+                    label: "Toggle Developer Tools",
+                    accelerator: "CmdOrCtrl+Shift+I",
+                    click: () => {
+                        mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.toggleDevTools();
+                    },
+                },
+                {
+                    label: "Reload",
+                    accelerator: "CmdOrCtrl+R",
+                    click: () => {
+                        mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.reload();
+                    },
+                },
+            ],
+        },
+        {
+            label: "Debug",
+            submenu: [
+                {
+                    label: "Force Reload",
+                    accelerator: "CmdOrCtrl+Shift+R",
+                    click: () => {
+                        mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.reloadIgnoringCache();
+                    },
+                },
+                {
+                    label: "Clear Cache and Restart",
+                    click: () => {
+                        mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.session.clearCache().then(() => {
+                            electron_1.app.relaunch();
+                            electron_1.app.exit();
+                        });
+                    },
+                },
+            ],
         },
     ];
     const menu = electron_1.Menu.buildFromTemplate(menuTemplate);
@@ -225,6 +264,16 @@ electron_1.ipcMain.handle("download-video", async (_, { url, format }) => {
 });
 electron_1.ipcMain.handle("open-external-link", async (_, url) => {
     return electron_1.shell.openExternal(url);
+});
+electron_1.ipcMain.on("directory-updated", (event, dir) => {
+    directoryUpdateListeners.forEach((callback) => callback(dir));
+});
+// Implementação da função para remover o listener
+electron_1.ipcMain.handle("remove-directory-update-listener", (event, callback) => {
+    const index = directoryUpdateListeners.indexOf(callback);
+    if (index > -1) {
+        directoryUpdateListeners.splice(index, 1);
+    }
 });
 electron_1.ipcMain.handle("open-downloads-folder", () => {
     electron_1.shell.openPath(downloadDir);

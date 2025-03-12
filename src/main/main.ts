@@ -19,6 +19,8 @@ let mainWindow: BrowserWindow | null = null;
 const configPath = path.join(app.getPath("userData"), "config.json");
 
 // Funções para ler e salvar configuração
+
+const directoryUpdateListeners: ((dir: string) => void)[] = [];
 function readConfig(): Record<string, any> {
   if (fs.existsSync(configPath)) {
     try {
@@ -92,9 +94,47 @@ app.whenReady().then(() => {
     },
     {
       label: "Arquivo",
+      submenu: [{ role: "quit" as const }],
+    },
+    {
+      label: "Developer",
       submenu: [
-        { role: "quit" as const }
-      ]
+        {
+          label: "Toggle Developer Tools",
+          accelerator: "CmdOrCtrl+Shift+I",
+          click: () => {
+            mainWindow?.webContents.toggleDevTools();
+          },
+        },
+        {
+          label: "Reload",
+          accelerator: "CmdOrCtrl+R",
+          click: () => {
+            mainWindow?.reload();
+          },
+        },
+      ],
+    },
+    {
+      label: "Debug",
+      submenu: [
+        {
+          label: "Force Reload",
+          accelerator: "CmdOrCtrl+Shift+R",
+          click: () => {
+            mainWindow?.webContents.reloadIgnoringCache();
+          },
+        },
+        {
+          label: "Clear Cache and Restart",
+          click: () => {
+            mainWindow?.webContents.session.clearCache().then(() => {
+              app.relaunch();
+              app.exit();
+            });
+          },
+        },
+      ],
     },
   ];
 
@@ -249,6 +289,17 @@ ipcMain.handle("open-external-link", async (_, url: string) => {
   return shell.openExternal(url);
 });
 
+ipcMain.on("directory-updated", (event, dir) => {
+  directoryUpdateListeners.forEach((callback) => callback(dir));
+});
+
+// Implementação da função para remover o listener
+ipcMain.handle("remove-directory-update-listener", (event, callback) => {
+  const index = directoryUpdateListeners.indexOf(callback);
+  if (index > -1) {
+    directoryUpdateListeners.splice(index, 1);
+  }
+});
 ipcMain.handle("open-downloads-folder", () => {
   shell.openPath(downloadDir);
 });
