@@ -4,11 +4,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
-const child_process_1 = require("child_process");
+const { spawn, exec } = require("child_process");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const updateYtDlp_1 = require("./updateYtDlp");
-// Caminho para o yt-dlp.exe
 const ytDlpPath = path_1.default.resolve(__dirname, "bin", "yt-dlp.exe");
 console.log(`Caminho para o yt-dlp.exe: ${ytDlpPath}`);
 if (!fs_1.default.existsSync(ytDlpPath)) {
@@ -16,9 +15,9 @@ if (!fs_1.default.existsSync(ytDlpPath)) {
     process.exit(1);
 }
 let mainWindow = null;
-// Configuração: caminho do arquivo de config na pasta de dados do usuário.
 const configPath = path_1.default.join(electron_1.app.getPath("userData"), "config.json");
-// Funções para ler e salvar configuração
+const crypto = require("crypto");
+const generateHash = (input) => crypto.createHash('sha256').update(input).digest('hex').slice(0, 8);
 const directoryUpdateListeners = [];
 function readConfig() {
     if (fs_1.default.existsSync(configPath)) {
@@ -66,7 +65,6 @@ electron_1.app.whenReady().then(() => {
             (0, updateYtDlp_1.checkAndUpdateYtDlp)(mainWindow);
         }
     });
-    // Define o menu da aplicação, incluindo a opção de escolher diretório de download
     const menuTemplate = [
         {
             label: "Configurações",
@@ -136,12 +134,11 @@ electron_1.app.whenReady().then(() => {
     const menu = electron_1.Menu.buildFromTemplate(menuTemplate);
     electron_1.Menu.setApplicationMenu(menu);
 });
-// ... Resto do seu código (handlers de get-video-info, download-video, etc.)
 electron_1.ipcMain.handle("get-video-info", async (_, url) => {
     console.log(`Recebido URL: ${url}`);
     return new Promise((resolve, reject) => {
         console.log(`Obtendo informações do vídeo: ${url}`);
-        (0, child_process_1.exec)(`"${ytDlpPath}" -j "${url}"`, { cwd: path_1.default.dirname(ytDlpPath) }, (error, stdout, stderr) => {
+        exec(`"${ytDlpPath}" -j "${url}"`, { cwd: path_1.default.dirname(ytDlpPath) }, (error, stdout, stderr) => {
             if (error) {
                 console.error("Erro ao executar yt-dlp:", error);
                 console.error("stderr:", stderr);
@@ -195,22 +192,24 @@ electron_1.ipcMain.handle("get-video-info", async (_, url) => {
 electron_1.ipcMain.handle("download-video", async (_, { url, format }) => {
     return new Promise((resolve, reject) => {
         console.log(`Iniciando download do vídeo: ${url}, formato: ${format}`);
-        const { spawn, exec } = require("child_process");
         const formatsToTry = [format, "bestvideo"];
         const tryDownload = (index) => {
             if (index >= formatsToTry.length) {
                 reject("Erro: Não foi possível baixar o vídeo.");
                 return;
             }
-            const outputPath = path_1.default.join(downloadDir, "%(title)s.%(ext)s");
+            const hash = generateHash(url);
+            const formatSuffix = format === "720p" ? "-720p" : format === "1080p" ? "-1080p" : "";
+            const outputPath = path_1.default.join(downloadDir, "%(title)s-" + hash + formatSuffix + ".%(ext)s");
             const normalizedOutput = outputPath.replace(/\\/g, "/");
             const args = [
                 "-f",
                 `${formatsToTry[index]}+bestaudio`,
-                "--merge-output-format", "mp4", // Garante saída em mp4 caso precise mesclar
+                "--merge-output-format", "mp4",
                 "--add-header",
                 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
                 url,
+                "--no-post-overwrites",
                 "-o",
                 normalizedOutput,
             ];
@@ -240,10 +239,9 @@ electron_1.ipcMain.handle("download-video", async (_, { url, format }) => {
                         try {
                             const videoData = JSON.parse(stdout);
                             const title = videoData.title || "video";
-                            const ext = videoData.ext || "mp4"; // Garante extensão correta
-                            const filePath = path_1.default.join(downloadDir, `${title}.${ext}`).replace(/\\/g, "/");
+                            const ext = videoData.ext || "mp4";
+                            const filePath = path_1.default.join(downloadDir, `${title}-${hash}-${videoData.format_id}.${ext}`).replace(/\\/g, "/");
                             const downloadInfo = { filePath, title, thumbnail: videoData.thumbnail || "" };
-                            // Envia para o frontend o caminho final do arquivo
                             mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send("download-complete", downloadInfo);
                             resolve(JSON.stringify(downloadInfo));
                         }
@@ -262,13 +260,63 @@ electron_1.ipcMain.handle("download-video", async (_, { url, format }) => {
         tryDownload(0);
     });
 });
+electron_1.ipcMain.handle("download-audio", async (_, url) => {
+    return new Promise((resolve, reject) => {
+        console.log(`Iniciando download do áudio do vídeo: ${url}`);
+        if (!url) {
+            reject("Erro: URL do vídeo não fornecida.");
+            return;
+        }
+        try {
+            // Gerar hash a partir da URL
+            const hash = generateHash(url);
+            const outputPath = path_1.default.join(downloadDir, "%(title)s-" + hash + ".mp3");
+            const normalizedOutput = outputPath.replace(/\\/g, "/");
+            // Configurar args para o download do áudio
+            const args = [
+                "-f",
+                "bestaudio",
+                "-o",
+                normalizedOutput,
+                url // Aqui está a URL sendo passada corretamente como o último parâmetro
+            ];
+            // Iniciar o processo de download
+            const processDownload = spawn(ytDlpPath, args);
+            processDownload.stdout.on("data", (data) => {
+                const message = data.toString();
+                console.log(message);
+                const progressMatch = message.match(/(\d+\.\d+)%/);
+                if (progressMatch) {
+                    const progress = parseFloat(progressMatch[1]);
+                    mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send("download-progress", progress);
+                }
+            });
+            processDownload.stderr.on("data", (data) => {
+                console.error(`Erro (stderr): ${data.toString()}`);
+            });
+            processDownload.on("close", (code) => {
+                if (code === 0) {
+                    console.log("Download de áudio concluído com sucesso!");
+                    resolve(`Áudio baixado com sucesso!`);
+                }
+                else {
+                    console.error(`Erro ao tentar o download de áudio. Código: ${code}`);
+                    reject("Erro ao tentar baixar o áudio.");
+                }
+            });
+        }
+        catch (error) {
+            console.error("Erro ao tentar iniciar o download de áudio:", error);
+            reject("Erro ao iniciar o download de áudio.");
+        }
+    });
+});
 electron_1.ipcMain.handle("open-external-link", async (_, url) => {
     return electron_1.shell.openExternal(url);
 });
 electron_1.ipcMain.on("directory-updated", (event, dir) => {
     directoryUpdateListeners.forEach((callback) => callback(dir));
 });
-// Implementação da função para remover o listener
 electron_1.ipcMain.handle("remove-directory-update-listener", (event, callback) => {
     const index = directoryUpdateListeners.indexOf(callback);
     if (index > -1) {
@@ -279,16 +327,16 @@ electron_1.ipcMain.handle("open-downloads-folder", () => {
     electron_1.shell.openPath(downloadDir);
 });
 electron_1.ipcMain.handle("get-download-directory", async () => {
-    return downloadDir; // Retorna o diretório de download configurado
+    return downloadDir;
 });
 electron_1.ipcMain.handle("choose-download-directory", async (event) => {
     const result = await electron_1.dialog.showOpenDialog({
         properties: ["openDirectory"],
     });
     if (result.canceled) {
-        return null; // Retorna null se o usuário cancelar
+        return null;
     }
     else {
-        return result.filePaths[0]; // Retorna o caminho do diretório escolhido
+        return result.filePaths[0];
     }
 });
