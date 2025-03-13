@@ -115,7 +115,7 @@ export default function PageDownloads({ onDownloadComplete }: PageDownloadsProps
       const result = await window.electronAPI.getVideoInfo(url);
       const downloadItem = {
         title: result.title || "Baixando áudio...",
-        filePath: `${downloadDir}/${result.title || "audio"}.mp3`, // Usa o diretório de download
+        filePath: `${downloadDir}/${result.title || "audio"}.mp3`, // Usar o diretório de download e salvar como .mp3
         thumbnail: result.thumbnail || null, // Usar null em vez de string vazia
         date: new Date().toLocaleString(),
         mediaType: 'audio',
@@ -128,11 +128,17 @@ export default function PageDownloads({ onDownloadComplete }: PageDownloadsProps
       setLoading(false);
       onDownloadComplete();
 
-      // Inicia o download em segundo plano
-      window.electronAPI.downloadVideo({
-        url,
-        options: { format: "bestaudio" }
-      });
+      // Inicia o download do áudio
+      window.electronAPI.downloadAudio(url) // Usando o novo método para baixar áudio
+        .then((downloadInfo) => {
+          console.log('Áudio baixado com sucesso:', downloadInfo);
+          // Aqui você pode fazer algo com o caminho do arquivo baixado, se necessário
+        })
+        .catch((error) => {
+          console.error("Erro ao baixar áudio:", error);
+          setOutput("Erro no download do áudio");
+        });
+
     } catch (error) {
       console.error("Erro no download do áudio:", error);
       setOutput("Erro no download do áudio");
