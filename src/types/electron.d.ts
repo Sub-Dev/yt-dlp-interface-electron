@@ -5,20 +5,21 @@ export interface ElectronAPI {
       resolution: string;
       ext: string;
       acodec: string | null;
-    }[];
+    }[]; 
     audioFormats: {
       format_id: string;
       ext: string;
       abr: string;
-    }[];
+    }[]; 
     subtitles: {
       lang: string;
       url: string;
-    }[];
-    title: string;
+    }[]; 
+    title: string; 
     thumbnail: string;
   }>;
   downloadVideo: (options: any) => Promise<string>;
+  downloadAudio: (url: string) => Promise<string>; // Novo método para download de áudio
   openExternalLink: (url: string) => Promise<void>;
   chooseDownloadDirectory: () => Promise<string>;
   onDownloadProgress: (callback: (progress: number) => void) => void;

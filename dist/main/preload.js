@@ -14,4 +14,5 @@ electron_1.contextBridge.exposeInMainWorld("electronAPI", {
     openDownloadsFolder: () => electron_1.ipcRenderer.invoke("open-downloads-folder"),
     removeDirectoryUpdateListener: (callback) => electron_1.ipcRenderer.removeListener("download-directory-updated", (_, dir) => callback(dir)),
     getDownloadDirectory: () => electron_1.ipcRenderer.invoke("get-download-directory"),
+    downloadAudio: (url) => electron_1.ipcRenderer.invoke("download-audio", url),
 });
