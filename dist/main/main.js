@@ -8,6 +8,7 @@ const { spawn, exec } = require("child_process");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const updateYtDlp_1 = require("./updateYtDlp");
+const { Notification } = require('electron');
 const ytDlpPath = path_1.default.resolve(__dirname, "bin", "yt-dlp.exe");
 console.log(`Caminho para o yt-dlp.exe: ${ytDlpPath}`);
 if (!fs_1.default.existsSync(ytDlpPath)) {
@@ -272,15 +273,13 @@ electron_1.ipcMain.handle("download-audio", async (_, url) => {
             const hash = generateHash(url);
             const outputPath = path_1.default.join(downloadDir, "%(title)s-" + hash + ".mp3");
             const normalizedOutput = outputPath.replace(/\\/g, "/");
-            // Configurar args para o download do áudio
             const args = [
                 "-f",
                 "bestaudio",
                 "-o",
                 normalizedOutput,
-                url // Aqui está a URL sendo passada corretamente como o último parâmetro
+                url
             ];
-            // Iniciar o processo de download
             const processDownload = spawn(ytDlpPath, args);
             processDownload.stdout.on("data", (data) => {
                 const message = data.toString();
@@ -297,6 +296,11 @@ electron_1.ipcMain.handle("download-audio", async (_, url) => {
             processDownload.on("close", (code) => {
                 if (code === 0) {
                     console.log("Download de áudio concluído com sucesso!");
+                    new Notification({
+                        title: 'Download Concluído',
+                        body: 'O áudio foi baixado com sucesso!',
+                        icon: path_1.default.join(__dirname, '../../assets/logo-yt-dlp.png'), // Adicionar ícone se desejar
+                    }).show();
                     resolve(`Áudio baixado com sucesso!`);
                 }
                 else {

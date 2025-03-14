@@ -1,27 +1,34 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Box, Typography, Button, IconButton } from "@mui/material";
-import FolderOpenIcon from "@mui/icons-material/FolderOpen"; // Ícone da pasta
+import { Box, Typography, Button, IconButton, Switch, FormControlLabel } from "@mui/material";
+import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 
 export default function PageConfig() {
   const [downloadDir, setDownloadDir] = useState<string>("");
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchDefaultDownloadDir = async () => {
-      const defaultDownloadDir = await window.electronAPI.getDownloadDirectory(); // Aguarda a resolução da promessa
-      setDownloadDir(defaultDownloadDir); // Define o diretório de download padrão
+      const defaultDownloadDir = await window.electronAPI.getDownloadDirectory();
+      setDownloadDir(defaultDownloadDir);
     };
 
     fetchDefaultDownloadDir();
 
     const updateDirectory = (dir: string) => {
-      setDownloadDir(dir); // Atualiza o diretório quando houver uma mudança
+      setDownloadDir(dir);
     };
 
     window.electronAPI.onDirectoryUpdate(updateDirectory);
 
+
+    const savedNotifications = localStorage.getItem("notificationsEnabled");
+    if (savedNotifications !== null) {
+      setNotificationsEnabled(savedNotifications === "true");
+    }
+
     return () => {
-      window.electronAPI.removeDirectoryUpdateListener(updateDirectory); // Remova o listener ao desmontar
+      window.electronAPI.removeDirectoryUpdateListener(updateDirectory);
     };
   }, []);
 
@@ -30,6 +37,12 @@ export default function PageConfig() {
     if (chosen) {
       setDownloadDir(chosen);
     }
+  };
+
+  const handleToggleNotifications = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = event.target.checked;
+    setNotificationsEnabled(newValue);
+    localStorage.setItem("notificationsEnabled", newValue.toString());
   };
 
   return (
@@ -57,6 +70,11 @@ export default function PageConfig() {
       >
         Alterar Diretório de Download
       </Button>
+
+      <FormControlLabel
+        control={<Switch checked={notificationsEnabled} onChange={handleToggleNotifications} />}
+        label="Ativar notificações"
+      />
     </Box>
   );
 }
