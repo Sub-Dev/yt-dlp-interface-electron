@@ -9,7 +9,7 @@ import {
   MenuItem,
   CircularProgress
 } from "@mui/material";
-import LoadingModal from "../../app/components/LoadingModal"; // Ajuste o caminho conforme sua estrutura
+import LoadingModal from "../../app/components/LoadingModal";
 import { VideoFormat, AudioFormat } from "../../types/types";
 import { SelectChangeEvent } from "@mui/material";
 
@@ -32,8 +32,8 @@ export default function PageDownloads({ onDownloadComplete }: PageDownloadsProps
 
   useEffect(() => {
     const fetchDownloadDir = async () => {
-      const dir = await window.electronAPI.getDownloadDirectory(); // Obtém o diretório de download
-      setDownloadDir(dir); // Armazena o diretório de download
+      const dir = await window.electronAPI.getDownloadDirectory();
+      setDownloadDir(dir);
     };
 
     fetchDownloadDir();
@@ -84,7 +84,7 @@ export default function PageDownloads({ onDownloadComplete }: PageDownloadsProps
       const result = await window.electronAPI.getVideoInfo(url);
       const downloadItem = {
         title: result.title || "Baixando...",
-        filePath: `${downloadDir}/${result.title || "video"}.mp4`, // Definido temporariamente
+        filePath: `${downloadDir}/${result.title || "video"}.mp4`,
         thumbnail: result.thumbnail || null,
         date: new Date().toLocaleString(),
         mediaType: "video",
@@ -97,7 +97,6 @@ export default function PageDownloads({ onDownloadComplete }: PageDownloadsProps
       setLoading(false);
       onDownloadComplete();
 
-      // Inicia o download em segundo plano
       window.electronAPI.downloadVideo({ url, options: { format: selectedVideo } });
     } catch (error) {
       console.error("Erro no download do vídeo:", error);
@@ -111,28 +110,24 @@ export default function PageDownloads({ onDownloadComplete }: PageDownloadsProps
     setLoading(true);
     setLoadingMessage("Obtendo informações do áudio...");
     try {
-      // Usar as informações que já temos do vídeo
       const result = await window.electronAPI.getVideoInfo(url);
       const downloadItem = {
         title: result.title || "Baixando áudio...",
-        filePath: `${downloadDir}/${result.title || "audio"}.mp3`, // Usar o diretório de download e salvar como .mp3
-        thumbnail: result.thumbnail || null, // Usar null em vez de string vazia
+        filePath: `${downloadDir}/${result.title || "audio"}.mp3`,
+        thumbnail: result.thumbnail || null,
         date: new Date().toLocaleString(),
         mediaType: 'audio',
         progress: 0
       };
 
-      // Adiciona ao histórico e muda para a tela de histórico
       const history = JSON.parse(localStorage.getItem('downloadHistory') || '[]');
       localStorage.setItem('downloadHistory', JSON.stringify([downloadItem, ...history]));
       setLoading(false);
       onDownloadComplete();
 
-      // Inicia o download do áudio
-      window.electronAPI.downloadAudio(url) // Usando o novo método para baixar áudio
+      window.electronAPI.downloadAudio(url)
         .then((downloadInfo) => {
           console.log('Áudio baixado com sucesso:', downloadInfo);
-          // Aqui você pode fazer algo com o caminho do arquivo baixado, se necessário
         })
         .catch((error) => {
           console.error("Erro ao baixar áudio:", error);

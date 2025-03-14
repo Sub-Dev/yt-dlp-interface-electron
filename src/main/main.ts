@@ -4,6 +4,8 @@ import path from "path";
 import fs from "fs";
 import { checkAndUpdateYtDlp } from "./updateYtDlp";
 
+const { Notification } = require('electron');
+
 const ytDlpPath = path.resolve(__dirname, "bin", "yt-dlp.exe");
 console.log(`Caminho para o yt-dlp.exe: ${ytDlpPath}`);
 
@@ -43,7 +45,6 @@ function saveConfig(newConfig: Record<string, any>): Record<string, any> {
   return config;
 }
 
-// Diretório de download configurável; por padrão, utiliza a pasta Downloads do usuário
 let downloadDir: string = path.join(process.env.USERPROFILE || "", "Downloads");
 const config = readConfig();
 if (config.downloadDir) {
@@ -215,7 +216,7 @@ ipcMain.handle("download-video", async (_, { url, format }) => {
         return;
       }
 
-      const hash = generateHash(url); 
+      const hash = generateHash(url);
 
       const formatSuffix = format === "720p" ? "-720p" : format === "1080p" ? "-1080p" : "";
       const outputPath = path.join(downloadDir, "%(title)s-" + hash + formatSuffix + ".%(ext)s");
@@ -261,12 +262,17 @@ ipcMain.handle("download-video", async (_, { url, format }) => {
             }
             try {
               const videoData = JSON.parse(stdout);
-              const title = videoData.title || "video";
-              const ext = videoData.ext || "mp4"; 
+              const title = videoData.title || "Vídeo";
+              const ext = videoData.ext || "mp4";
               const filePath = path.join(downloadDir, `${title}-${hash}-${videoData.format_id}.${ext}`).replace(/\\/g, "/");
 
               const downloadInfo = { filePath, title, thumbnail: videoData.thumbnail || "" };
-              
+
+              new Notification({
+                title: 'Download Concluído',
+                body: `O vídeo "${title}" foi baixado com sucesso!`,
+                icon: videoData.thumbnail || path.join(__dirname, '../../assets/logo-yt-dlp.png'),
+              }).show();
 
               mainWindow?.webContents.send("download-complete", downloadInfo);
               resolve(JSON.stringify(downloadInfo));
@@ -286,31 +292,29 @@ ipcMain.handle("download-video", async (_, { url, format }) => {
   });
 });
 
+
 ipcMain.handle("download-audio", async (_, url) => {
   return new Promise((resolve, reject) => {
     console.log(`Iniciando download do áudio do vídeo: ${url}`);
-    
+
     if (!url) {
       reject("Erro: URL do vídeo não fornecida.");
       return;
     }
 
     try {
-      // Gerar hash a partir da URL
       const hash = generateHash(url);
       const outputPath = path.join(downloadDir, "%(title)s-" + hash + ".mp3");
       const normalizedOutput = outputPath.replace(/\\/g, "/");
 
-      // Configurar args para o download do áudio
       const args = [
         "-f",
         "bestaudio",
         "-o",
         normalizedOutput,
-        url // Aqui está a URL sendo passada corretamente como o último parâmetro
+        url
       ];
 
-      // Iniciar o processo de download
       const processDownload = spawn(ytDlpPath, args);
 
       processDownload.stdout.on("data", (data) => {
@@ -329,7 +333,12 @@ ipcMain.handle("download-audio", async (_, url) => {
 
       processDownload.on("close", (code) => {
         if (code === 0) {
-          console.log("Download de áudio concluído com sucesso!");
+          console.log("Download concluído com sucesso!");
+          new Notification({
+            title: 'Download Concluído',
+            body: 'O áudio foi baixado com sucesso!',
+            icon: path.join(__dirname, '../../assets/logo-yt-dlp.png'), 
+          }).show();
           resolve(`Áudio baixado com sucesso!`);
         } else {
           console.error(`Erro ao tentar o download de áudio. Código: ${code}`);
