@@ -47,16 +47,32 @@ export default function PageDownloads({ onDownloadComplete }: PageDownloadsProps
     });
   }, []);
 
+  const isValidUrl = (str: string) => {
+    try {
+      const newUrl = new URL(str);
+      return newUrl.protocol === "http:" || newUrl.protocol === "https:";
+    } catch (e) {
+      return false;
+    }
+  };
+
 
   const handleCheckInfo = async () => {
     if (!url.trim()) {
-      setOutput("Erro: Por favor, insira uma URL válida.");
+      setOutput("Erro: O campo de URL está vazio. Digite uma URL válida.");
       return;
     }
+
+    if (!isValidUrl(url)) {
+      setOutput("Erro: A URL inserida não é válida. Certifique-se de que o link está correto.");
+      return;
+    }
+
     setLoading(true);
     setLoadingMessage("Verificando vídeo...");
     setOutput("");
     setInfoLoaded(false);
+
     try {
       const result = await window.electronAPI.getVideoInfo(url);
       setVideoFormats(result.videoFormats);
@@ -65,7 +81,14 @@ export default function PageDownloads({ onDownloadComplete }: PageDownloadsProps
       setInfoLoaded(true);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      setOutput(`Erro ao obter informações do vídeo: ${errorMessage}`);
+
+      if (errorMessage.includes("403") || errorMessage.includes("404")) {
+        setOutput("Erro: O vídeo pode estar indisponível ou a URL fornecida está incorreta.");
+      } else if (errorMessage.includes("ECONNREFUSED")) {
+        setOutput("Erro: Falha na conexão com o servidor. Verifique sua internet e tente novamente.");
+      } else {
+        setOutput(`Erro ao obter informações do vídeo: ${errorMessage}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -73,15 +96,17 @@ export default function PageDownloads({ onDownloadComplete }: PageDownloadsProps
 
   const handleDownloadVideo = async () => {
     if (!selectedVideo) {
-      setOutput("Erro: Selecione uma qualidade de vídeo antes de baixar.");
+      setOutput("Erro: Escolha uma qualidade de vídeo antes de baixar.");
       return;
     }
 
     setLoading(true);
-    setLoadingMessage("Obtendo informações do vídeo...");
+    setLoadingMessage("Preparando download...");
 
     try {
       const result = await window.electronAPI.getVideoInfo(url);
+      if (!result) throw new Error("Nenhuma informação do vídeo foi recebida.");
+
       const downloadItem = {
         title: result.title || "Baixando...",
         filePath: `${downloadDir}/${result.title || "video"}.mp4`,
@@ -97,49 +122,88 @@ export default function PageDownloads({ onDownloadComplete }: PageDownloadsProps
       setLoading(false);
       onDownloadComplete();
 
-      window.electronAPI.downloadVideo({ url, options: { format: selectedVideo } });
-    } catch (error) {
+      window.electronAPI.downloadVideo({ url, options: { format: selectedVideo } })
+        .catch((error: unknown) => {
+          console.error("Erro ao iniciar o download:", error);
+          setOutput("Erro: Não foi possível iniciar o download. Verifique a URL ou tente novamente mais tarde.");
+        });
+
+    } catch (error: unknown) {
       console.error("Erro no download do vídeo:", error);
-      setOutput("Erro no download do vídeo");
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      if (errorMessage.includes("403") || errorMessage.includes("404")) {
+        setOutput("Erro: Vídeo não disponível ou URL inválida.");
+      } else if (errorMessage.includes("ECONNREFUSED")) {
+        setOutput("Erro: Falha na conexão com o servidor.");
+      } else {
+        setOutput(`Erro ao tentar baixar o vídeo: ${errorMessage}`);
+      }
+    } finally {
       setLoading(false);
     }
   };
 
 
   const handleDownloadAudio = async () => {
+    if (!url || typeof url !== "string") {
+      console.error("URL inválida");
+      setOutput("Erro: URL inválida");
+      return;
+    }
+
     setLoading(true);
     setLoadingMessage("Obtendo informações do áudio...");
+
     try {
       const result = await window.electronAPI.getVideoInfo(url);
+
+      if (!result || typeof result !== "object") {
+        throw new Error("Resposta inválida ao obter informações do vídeo.");
+      }
+
+      const title = result.title || "Baixando áudio...";
+      const filePath = `${downloadDir}/${result.title || "audio"}.mp3`;
+      const thumbnail = result.thumbnail || null;
+
       const downloadItem = {
-        title: result.title || "Baixando áudio...",
-        filePath: `${downloadDir}/${result.title || "audio"}.mp3`,
-        thumbnail: result.thumbnail || null,
+        title,
+        filePath,
+        thumbnail,
         date: new Date().toLocaleString(),
-        mediaType: 'audio',
-        progress: 0
+        mediaType: "audio",
+        progress: 0,
       };
 
-      const history = JSON.parse(localStorage.getItem('downloadHistory') || '[]');
-      localStorage.setItem('downloadHistory', JSON.stringify([downloadItem, ...history]));
+      try {
+        const history = JSON.parse(localStorage.getItem("downloadHistory") || "[]");
+        if (!Array.isArray(history)) throw new Error("Histórico corrompido");
+        localStorage.setItem("downloadHistory", JSON.stringify([downloadItem, ...history]));
+      } catch (historyError) {
+        console.warn("Erro ao acessar o histórico de downloads, resetando...", historyError);
+        localStorage.setItem("downloadHistory", JSON.stringify([downloadItem]));
+      }
+
       setLoading(false);
       onDownloadComplete();
 
-      window.electronAPI.downloadAudio(url)
+      window.electronAPI
+        .downloadAudio(url)
         .then((downloadInfo) => {
-          console.log('Áudio baixado com sucesso:', downloadInfo);
+          console.log("Áudio baixado com sucesso:", downloadInfo);
         })
         .catch((error) => {
           console.error("Erro ao baixar áudio:", error);
           setOutput("Erro no download do áudio");
         });
 
-    } catch (error) {
-      console.error("Erro no download do áudio:", error);
-      setOutput("Erro no download do áudio");
+    } catch (error: any) {
+      console.error("Erro no processo de download:", error);
+      setOutput(`Erro: ${error.message || "Falha desconhecida ao baixar o áudio"}`);
       setLoading(false);
     }
   };
+
 
   return (
     <Box
