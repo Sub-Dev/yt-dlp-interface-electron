@@ -43,7 +43,6 @@ function saveConfig(newConfig) {
     }
     return config;
 }
-// Diretório de download configurável; por padrão, utiliza a pasta Downloads do usuário
 let downloadDir = path_1.default.join(process.env.USERPROFILE || "", "Downloads");
 const config = readConfig();
 if (config.downloadDir) {
@@ -239,10 +238,15 @@ electron_1.ipcMain.handle("download-video", async (_, { url, format }) => {
                         }
                         try {
                             const videoData = JSON.parse(stdout);
-                            const title = videoData.title || "video";
+                            const title = videoData.title || "Vídeo";
                             const ext = videoData.ext || "mp4";
                             const filePath = path_1.default.join(downloadDir, `${title}-${hash}-${videoData.format_id}.${ext}`).replace(/\\/g, "/");
                             const downloadInfo = { filePath, title, thumbnail: videoData.thumbnail || "" };
+                            new Notification({
+                                title: 'Download Concluído',
+                                body: `O vídeo "${title}" foi baixado com sucesso!`,
+                                icon: videoData.thumbnail || path_1.default.join(__dirname, '../../assets/logo-yt-dlp.png'),
+                            }).show();
                             mainWindow === null || mainWindow === void 0 ? void 0 : mainWindow.webContents.send("download-complete", downloadInfo);
                             resolve(JSON.stringify(downloadInfo));
                         }
@@ -269,7 +273,6 @@ electron_1.ipcMain.handle("download-audio", async (_, url) => {
             return;
         }
         try {
-            // Gerar hash a partir da URL
             const hash = generateHash(url);
             const outputPath = path_1.default.join(downloadDir, "%(title)s-" + hash + ".mp3");
             const normalizedOutput = outputPath.replace(/\\/g, "/");
@@ -295,11 +298,11 @@ electron_1.ipcMain.handle("download-audio", async (_, url) => {
             });
             processDownload.on("close", (code) => {
                 if (code === 0) {
-                    console.log("Download de áudio concluído com sucesso!");
+                    console.log("Download concluído com sucesso!");
                     new Notification({
                         title: 'Download Concluído',
                         body: 'O áudio foi baixado com sucesso!',
-                        icon: path_1.default.join(__dirname, '../../assets/logo-yt-dlp.png'), // Adicionar ícone se desejar
+                        icon: path_1.default.join(__dirname, '../../assets/logo-yt-dlp.png'),
                     }).show();
                     resolve(`Áudio baixado com sucesso!`);
                 }
