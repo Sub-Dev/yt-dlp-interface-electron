@@ -28,6 +28,8 @@ export default function PageDownloads({ onDownloadComplete }: PageDownloadsProps
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
   const [downloadDir, setDownloadDir] = useState("");
+  const [title, setTitle] = useState("");
+  const [thumbnail, setThumbnail] = useState("");
 
 
   useEffect(() => {
@@ -68,6 +70,8 @@ export default function PageDownloads({ onDownloadComplete }: PageDownloadsProps
       return;
     }
 
+
+
     setLoading(true);
     setLoadingMessage("Verificando vídeo...");
     setOutput("");
@@ -75,6 +79,9 @@ export default function PageDownloads({ onDownloadComplete }: PageDownloadsProps
 
     try {
       const result = await window.electronAPI.getVideoInfo(url);
+
+      setTitle(result.title || "Título não disponível");
+      setThumbnail(result.thumbnail || "");
       setVideoFormats(result.videoFormats);
       setAudioFormats(result.audioFormats);
       setSubtitles(result.subtitles);
@@ -259,6 +266,19 @@ export default function PageDownloads({ onDownloadComplete }: PageDownloadsProps
           <>
             {videoFormats.length > 0 && (
               <>
+                {thumbnail && title && (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+                    <img
+                      src={thumbnail}
+                      alt={title}
+                      style={{ width: 120, height: "auto", borderRadius: 8 }}
+                    />
+                    <Typography variant="h6" sx={{ color: "white" }}>
+                      {title}
+                    </Typography>
+                  </Box>
+                )}
+
                 <Typography variant="h6" gutterBottom>
                   Qualidade do Vídeo
                 </Typography>
