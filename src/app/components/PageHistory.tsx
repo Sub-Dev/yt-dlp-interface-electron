@@ -16,12 +16,17 @@ import { DownloadItem } from "../../types/types";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+
+const ITEMS_PER_PAGE = 5; // Define quantos itens exibir por página
 
 export default function PageHistory() {
   const [downloadHistory, setDownloadHistory] = useState<DownloadItem[]>([]);
   const [filterName, setFilterName] = useState("");
   const [filterMediaType, setFilterMediaType] = useState("");
   const [filterDate, setFilterDate] = useState<Date | null>(null);
+  const [currentPage, setCurrentPage] = useState(1); // Estado para a página atual
 
   useEffect(() => {
     const stored = localStorage.getItem("downloadHistory");
@@ -59,6 +64,13 @@ export default function PageHistory() {
     const matchMedia = filterMediaType ? item.mediaType === filterMediaType : true;
     return matchName && matchDate && matchMedia;
   });
+
+
+  const totalPages = Math.ceil(filteredHistory.length / ITEMS_PER_PAGE);
+  const paginatedHistory = filteredHistory.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   const handleClearHistory = () => {
     localStorage.removeItem("downloadHistory");
@@ -175,10 +187,10 @@ export default function PageHistory() {
         </Button>
       </Box>
 
-      {filteredHistory.length === 0 ? (
-        <Typography>Nenhum download realizado.</Typography>
+      {paginatedHistory.length === 0 ? (
+        <Typography>Nenhum download encontrado.</Typography>
       ) : (
-        filteredHistory.map((item, index) => (
+        paginatedHistory.map((item, index) => (
           <Box
             key={index}
             sx={{
@@ -201,7 +213,7 @@ export default function PageHistory() {
               <Box
                 sx={{
                   width: "120px",
-                  height: "67px", // proporção 16:9
+                  height: "67px",
                   backgroundColor: "grey.300",
                   marginRight: "10px",
                   display: "flex",
@@ -224,7 +236,6 @@ export default function PageHistory() {
                 </Typography>
               )}
             </Box>
-            {/* Se o item ainda estiver em progresso, exiba um CircularProgress */}
             {item.progress !== undefined && item.progress < 100 && (
               <Box sx={{ position: "absolute", right: 16, display: "flex", alignItems: "center", gap: 1 }}>
                 <Typography variant="body2">{item.progress.toFixed(1)}%</Typography>
@@ -233,6 +244,28 @@ export default function PageHistory() {
             )}
           </Box>
         ))
+      )}
+
+      {totalPages > 1 && (
+        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 2, mt: 2 }}>
+          <IconButton
+            sx={{ color: "white" }}
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+          >
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography sx={{ color: "white" }}>
+            Página {currentPage} de {totalPages}
+          </Typography>
+          <IconButton
+            sx={{ color: "white" }}
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+          >
+            <ArrowForwardIcon />
+          </IconButton>
+        </Box>
       )}
     </Box>
   );
