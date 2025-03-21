@@ -59,7 +59,11 @@ electron_1.app.whenReady().then(() => {
             contextIsolation: true,
         },
     });
-    mainWindow.loadURL("http://localhost:3000");
+    const isDev = !electron_1.app.isPackaged;
+    const startUrl = isDev
+        ? "http://localhost:3000"
+        : `file://${path_1.default.join(__dirname, "../renderer/index.html")}`;
+    mainWindow.loadURL(startUrl);
     mainWindow.webContents.on("did-finish-load", () => {
         if (mainWindow) {
             (0, updateYtDlp_1.checkAndUpdateYtDlp)(mainWindow);

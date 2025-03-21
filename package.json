@@ -2,15 +2,19 @@
   "name": "yt-dlp-interface-electron",
   "version": "0.1.0",
   "private": true,
-  "main": "dist/main.js",
+  "main": "dist/main/main.js",
   "scripts": {
     "dev": "next dev",
-    "build": "next build && tsc --project tsconfig.electron.json && npm run copy-yt-dlp && npm run copy-assets",
-    "copy-yt-dlp": "copyfiles -u 1 ./bin/yt-dlp.exe ./dist/main/bin/",
+    "build:next": "next build",
+    "export:move": "rimraf dist/renderer && mkdirp dist/renderer && cp -r out/. dist/renderer/",
+    "build:electron": "tsc --project tsconfig.electron.json",
+  "copy-yt-dlp": "copyfiles -u 1 ./bin/yt-dlp.exe ./dist/main/bin/",
     "copy-assets": "copyfiles -u 1 ./assets/**/* ./dist/assets/",
+    "build": "npm run build:next && npm run export:move && npm run build:electron && npm run copy-yt-dlp && npm run copy-assets",
     "start": "next start",
-    "electron": "tsc --project tsconfig.electron.json && electron dist/main/main.js",
-    "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && npm run electron\""
+    "electron": "npm run build:electron && electron dist/main/main.js",
+    "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && npm run electron\"",
+    "dist": "npm run build && electron-builder"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -32,10 +36,31 @@
     "concurrently": "^9.1.2",
     "copyfiles": "^2.4.1",
     "electron": "^34.2.0",
+    "electron-builder": "^25.1.8",
+    "mkdirp": "^3.0.1",
     "postcss": "^8",
+    "rimraf": "^6.0.1",
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.2",
     "wait-on": "^8.0.2"
+  },
+  "build": {
+    "appId": "com.subdev.ytdlpinterface",
+    "productName": "yt-dlp-Interface",
+    "files": [
+      "dist/**/*",
+      "dist/main/preload.js",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "assets"
+    },
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "icon": "assets/logo-yt-dlp.ico"
+    }
   }
 }
