@@ -6,7 +6,10 @@ import { checkAndUpdateYtDlp } from "./updateYtDlp";
 
 const { Notification } = require('electron');
 
-const ytDlpPath = path.resolve(__dirname, "bin", "yt-dlp.exe");
+const ytDlpPath = process.env.NODE_ENV === 'production'
+  ? path.join(process.resourcesPath, 'bin', 'yt-dlp.exe') // For packaged app
+  : path.join(app.getAppPath(), 'bin', 'yt-dlp.exe'); // For development
+
 console.log(`Caminho para o yt-dlp.exe: ${ytDlpPath}`);
 
 if (!fs.existsSync(ytDlpPath)) {
@@ -50,26 +53,48 @@ const config = readConfig();
 if (config.downloadDir) {
   downloadDir = config.downloadDir;
 }
-
 app.whenReady().then(() => {
-  mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
-    icon: path.join(__dirname, "assets", "logo-yt-dlp.png"),
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      nodeIntegration: false,
-      contextIsolation: true,
-    },
-  });
+  try {
+    mainWindow = new BrowserWindow({
+      width: 800,
+      height: 600,
+      icon: path.join(__dirname, "assets", "logo-yt-dlp.png"),
+      webPreferences: {
+        preload: path.join(__dirname, "preload.js"),
+        nodeIntegration: false,
+        contextIsolation: true,
+      },
+    });
 
-  mainWindow.loadURL("http://localhost:3000");
+    // Verificação de erros para quando a janela não é criada
+    if (!mainWindow) {
+      console.error("Erro: Não foi possível criar a janela principal.");
+      return;
+    }
+
+  const isDev = !app.isPackaged;
+
+  const startUrl = isDev
+  ? "http://localhost:3000"
+  : `file://${path.join(__dirname, "../renderer/index.html").replace(/\\/g, "/")}`;
+
+  mainWindow.loadURL(startUrl);
 
   mainWindow.webContents.on("did-finish-load", () => {
     if (mainWindow) {
       checkAndUpdateYtDlp(mainWindow);
     }
   });
+
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+  });
+
+} catch (error) {
+  console.error("Erro ao inicializar o Electron:", error);
+  process.exit(1);  // Finaliza o processo se não conseguir iniciar a aplicação corretamente
+}
+
 
   const menuTemplate: MenuItemConstructorOptions[] = [
     {
